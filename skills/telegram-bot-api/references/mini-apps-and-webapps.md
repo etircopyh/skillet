@@ -163,3 +163,48 @@ Telegram Mini Apps provide native integration APIs on the `window.Telegram.WebAp
 | **Opened via `KeyboardButton` (Reply Keyboard)** | `Telegram.WebApp.sendData(string)` | Sends `web_app_data` to bot. Closes Mini App. **Only works for Reply Keyboard buttons.** |
 | **Opened via `InlineKeyboardButton` (Inline Query)** | `bot.answerWebAppQuery(web_app_query_id, result)` | Injects an inline message into the chat on behalf of the user. |
 | **Opened via Direct Link / Menu Button** | Direct standard HTTPS API request from TMA frontend to backend | Authenticate via `initData` in `Authorization: tma <rawInitData>` header. |
+
+---
+
+## 5. Prepared Messages & User Status Integration
+
+### 5.1. Prepared Inline Messages (`savePreparedInlineMessage`)
+Allows a Mini App to pre-stage an inline message on the server, returning a `PreparedInlineMessage` ID (`id`, `expiration_date`) that the client can prompt the user to send into any chat:
+
+```http
+POST https://api.telegram.org/bot<token>/savePreparedInlineMessage
+Content-Type: application/json
+
+{
+  "user_id": 123456789,
+  "result": {
+    "type": "article",
+    "id": "match_invite_1",
+    "title": "Join My Multiplayer Game",
+    "input_message_content": {
+      "message_text": "🎮 I challenge you to a match!"
+    }
+  },
+  "allow_user_chats": true,
+  "allow_group_chats": true
+}
+```
+
+### 5.2. Prepared Keyboard Buttons (`savePreparedKeyboardButton`)
+Prepares custom keyboard requests (e.g. requesting users or chats) from within a Mini App session.
+
+### 5.3. Managing User Emoji Status (`setUserEmojiStatus`)
+When a user grants the bot permission via `WebApp.requestEmojiStatusAccess()`:
+
+```http
+POST https://api.telegram.org/bot<token>/setUserEmojiStatus
+Content-Type: application/json
+
+{
+  "user_id": 123456789,
+  "emoji_status_custom_emoji_id": "5368324170671202286",
+  "emoji_status_expiration_date": 1712880000
+}
+```
+*Pass an empty string `""` to remove the emoji status.*
+

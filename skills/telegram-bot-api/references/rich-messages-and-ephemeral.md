@@ -218,3 +218,91 @@ Communities link multiple supergroups, channels, and bots together under a singl
   - `community_chat_added`: Supergroup or channel added to community.
   - `community_chat_removed`: Chat removed from community.
   - `community_chat_joined`: User joined chat via community directory.
+---
+
+## 6. Complete Rich Message AST Types & Ephemeral Parameters
+
+```typescript
+interface EphemeralMessageParameters {
+  ephemeral_message_lifetime: number; // Message visibility lifetime in seconds
+}
+
+interface InputRichMessage {
+  content: InputRichMessageContent[];
+}
+
+type InputRichMessageContent =
+  | InputRichBlockFooter
+  | InputRichBlockAnchor
+  | InputRichBlockSlideshow
+  | InputRichBlockMap
+  | InputRichBlockAnimation
+  | InputRichBlockAudio
+  | InputRichBlockPhoto
+  | InputRichBlockVideo
+  | InputRichBlockVoiceNote;
+
+interface InputRichMessageMedia { media: string; caption?: string; }
+interface RichMessageButton { text: string; url?: string; callback_data?: string; }
+
+// RichText AST Formats
+type RichText =
+  | RichTextBold | RichTextItalic | RichTextUnderline | RichTextStrikethrough
+  | RichTextSpoiler | RichTextSubscript | RichTextSuperscript | RichTextMarked
+  | RichTextCode | RichTextMathematicalExpression | RichTextEmailAddress
+  | RichTextPhoneNumber | RichTextBankCardNumber | RichTextMention
+  | RichTextHashtag | RichTextCashtag | RichTextBotCommand
+  | RichTextDateTime | RichTextTextMention | RichTextCustomEmoji | RichTextUrl
+  | RichTextButton | RichTextAnchor | RichTextAnchorLink | RichTextReference | RichTextReferenceLink;
+
+interface RichTextBold { type: 'bold'; text: string; }
+interface RichTextItalic { type: 'italic'; text: string; }
+interface RichTextUnderline { type: 'underline'; text: string; }
+interface RichTextStrikethrough { type: 'strikethrough'; text: string; }
+interface RichTextSpoiler { type: 'spoiler'; text: string; }
+interface RichTextSubscript { type: 'subscript'; text: string; }
+interface RichTextSuperscript { type: 'superscript'; text: string; }
+interface RichTextMarked { type: 'marked'; text: string; }
+interface RichTextCode { type: 'code'; text: string; }
+interface RichTextMathematicalExpression { type: 'mathematical_expression'; text: string; }
+interface RichTextEmailAddress { type: 'email_address'; text: string; }
+interface RichTextPhoneNumber { type: 'phone_number'; text: string; }
+interface RichTextBankCardNumber { type: 'bank_card_number'; text: string; }
+interface RichTextMention { type: 'mention'; text: string; }
+interface RichTextHashtag { type: 'hashtag'; text: string; }
+interface RichTextCashtag { type: 'cashtag'; text: string; }
+interface RichTextBotCommand { type: 'bot_command'; text: string; }
+interface RichTextDateTime { type: 'date_time'; text: string; unix_time: number; format?: string; }
+interface RichTextTextMention { type: 'text_mention'; text: string; user: User; }
+interface RichTextCustomEmoji { type: 'custom_emoji'; text: string; custom_emoji_id: string; }
+interface RichTextUrl { type: 'url'; text: string; url: string; }
+interface RichTextButton { type: 'button'; text: string; button: RichMessageButton; }
+interface RichTextAnchor { type: 'anchor'; text: string; name: string; }
+interface RichTextAnchorLink { type: 'anchor_link'; text: string; anchor_name: string; url?: string; }
+interface RichTextReference { type: 'reference'; text: string; reference: string; }
+interface RichTextReferenceLink { type: 'reference_link'; text: string; reference: string; url?: string; }
+
+// RichBlock Rendered Blocks
+interface RichBlockCaption { type: 'caption'; text: RichText[]; }
+interface RichBlockTableCell { type: 'table_cell'; text: RichText[]; }
+interface RichBlockFooter { type: 'footer'; text: RichText[]; }
+interface RichBlockAnchor { type: 'anchor'; name: string; }
+interface RichBlockSlideshow { type: 'slideshow'; items: InputRichMessageMedia[]; }
+interface RichBlockMap { type: 'map'; latitude: number; longitude: number; }
+interface RichBlockAnimation { type: 'animation'; media: string; }
+interface RichBlockAudio { type: 'audio'; media: string; }
+interface RichBlockPhoto { type: 'photo'; media: string; }
+interface RichBlockVideo { type: 'video'; media: string; }
+interface RichBlockVoiceNote { type: 'voice_note'; media: string; }
+
+// Input Rich Blocks (for sending)
+interface InputRichBlockFooter { type: 'footer'; text: RichText[]; }
+interface InputRichBlockAnchor { type: 'anchor'; name: string; }
+interface InputRichBlockSlideshow { type: 'slideshow'; items: InputRichMessageMedia[]; }
+interface InputRichBlockMap { type: 'map'; latitude: number; longitude: number; }
+interface InputRichBlockAnimation { type: 'animation'; media: string; }
+interface InputRichBlockAudio { type: 'audio'; media: string; }
+interface InputRichBlockPhoto { type: 'photo'; media: string; }
+interface InputRichBlockVideo { type: 'video'; media: string; }
+interface InputRichBlockVoiceNote { type: 'voice_note'; media: string; }
+```

@@ -134,6 +134,12 @@ Content-Type: application/json
 }
 ```
 
+### Checking Bot Star Balance (`getMyStarBalance`)
+```http
+POST https://api.telegram.org/bot<token>/getMyStarBalance
+```
+*Requires no parameters. Returns `StarAmount` (`amount: Integer`, `nanostar_amount: Integer`).*
+
 ### Fetching Star Transaction Ledger (`getStarTransactions`)
 Returns incoming and outgoing Telegram Star transactions for financial reconciliation:
 
@@ -146,6 +152,7 @@ Content-Type: application/json
   "limit": 100
 }
 ```
+*Returns `StarTransactions`. Each `StarTransaction` has `id`, `amount`, `date`, and `source`/`receiver` typed as `TransactionPartner` (`TransactionPartnerUser`, `TransactionPartnerChat`, `TransactionPartnerAffiliateProgram`, `TransactionPartnerFragment`, `TransactionPartnerTelegramAds`, `TransactionPartnerTelegramApi`, `TransactionPartnerOther`).*
 
 ---
 
@@ -200,29 +207,137 @@ Listen for the `subscription` update field in `Update`:
 - `subscription.is_canceled`: User canceled auto-renewal.
 - `subscription.until_date`: Expiry Unix timestamp.
 
----
-
-## 8. Gifts & Digital Collectibles (Bot API 9.2 - 9.4 / 10.3)
-
-Bots can send, inspect, and receive Telegram Gifts and blockchain-backed Unique Gifts:
-
-### Sending Gifts (`sendGift`)
+### Editing User Subscription (`editUserStarSubscription`)
+Allows canceling or extending an active Telegram Star subscription:
 ```http
-POST https://api.telegram.org/bot<token>/sendGift
+POST https://api.telegram.org/bot<token>/editUserStarSubscription
 Content-Type: application/json
 
 {
   "user_id": 123456789,
-  "gift_id": "gift_abc123",
-  "text": "Happy coding!",
-  "pay_for_upgrade": true
+  "telegram_payment_charge_id": "charge_id_abc12345",
+  "is_canceled": true
 }
 ```
 
+### Channel Subscription Invite Links (`createChatSubscriptionInviteLink`)
+Create invite links to private channels that automatically charge a recurring monthly Telegram Star subscription:
+```http
+POST https://api.telegram.org/bot<token>/createChatSubscriptionInviteLink
+Content-Type: application/json
+
+{
+  "chat_id": -1009876543210,
+  "name": "VIP Signals Monthly",
+  "subscription_period": 2592000,
+  "subscription_price": 500
+}
+```
+*`editChatSubscriptionInviteLink` allows modifying the name of existing subscription links.*
+
+---
+
+## 8. Gifts & Digital Collectibles (Bot API 9.2 - 9.4 / 10.3)
+
+Bots can send, inspect, transfer, upgrade, and receive Telegram Gifts and blockchain-backed Unique Gifts:
+
+### Available Gifts & Sending
+- **`getAvailableGifts()`**: Fetches the list of gifts currently available for purchase from Telegram. Returns `Gifts`.
+- **Sending Gifts (`sendGift`)**:
+  ```http
+  POST https://api.telegram.org/bot<token>/sendGift
+  Content-Type: application/json
+
+  {
+    "user_id": 123456789,
+    "gift_id": "gift_abc123",
+    "text": "Happy coding!",
+    "pay_for_upgrade": true
+  }
+  ```
 - **Gifting Telegram Premium**: `giftPremiumSubscription(user_id, month_count, star_count, text)`.
+
+### Managing & Converting Gifts
 - **Querying Gifts**:
   - `getUserGifts(user_id)`: Fetches gifts owned by a specific user.
   - `getChatGifts(chat_id)`: Fetches gifts received by a channel or chat.
   - `getBusinessAccountGifts(business_connection_id)`: Fetches gifts received by business accounts.
+- **Convert Gift to Stars (`convertGiftToStars`)**: Convert an un-upgraded regular gift into Telegram Stars (`user_id`, `owned_gift_id`).
+- **Upgrade Gift (`upgradeGift`)**: Pay to upgrade a gift to a unique collectible (`user_id`, `owned_gift_id`, `keep_original_details`).
+- **Transfer Gift (`transferGift`)**: Transfer an upgraded unique gift to another user or channel (`user_id`, `owned_gift_id`, `new_owner_chat_id`, `star_count`).
 - **`UniqueGift` & Collectibles**: Includes `gift_id`, `rarity`, `is_burned`, `is_from_blockchain` (TON blockchain integration).
+---
 
+## 9. Invoices, Shipping, Star Settlements & Digital Gifts
+
+### Shipping Query Handling
+```typescript
+// Must be answered within 10 seconds SLA
+answerShippingQuery(params: {
+  shipping_query_id: string;
+  ok: boolean;
+  shipping_options?: ShippingOption[];
+  error_message?: string;
+}): Promise<boolean>;
+```
+
+### Invoice & Transaction Data Types
+```typescript
+interface LabeledPrice { label: string; amount: number; } // In smallest currency units (cents or integer stars)
+interface ShippingAddress { country_code: string; state: string; city: string; street_line1: string; street_line2: string; post_code: string; }
+interface OrderInfo { name?: string; phone_number?: string; email?: string; shipping_address?: ShippingAddress; }
+interface ShippingOption { id: string; title: string; prices: LabeledPrice[]; }
+interface SuccessfulPayment {
+  currency: string;
+  total_amount: number;
+  invoice_payload: string;
+  subscription_expiration_date?: number;
+  is_recurring?: boolean;
+  is_first_recurring?: boolean;
+  shipping_option_id?: string;
+  order_info?: OrderInfo;
+  telegram_payment_charge_id: string;
+  provider_payment_charge_id: string;
+}
+interface RefundedPayment {
+  currency: string;
+  total_amount: number;
+  invoice_payload: string;
+  telegram_payment_charge_id: string;
+  provider_payment_charge_id?: string;
+}
+interface AffiliateInfo {
+  commission_per_mille: number; // 1-1000
+  amount: number;
+  nanostar_amount?: number;
+  affiliate_user?: User;
+  affiliate_chat?: Chat;
+}
+
+type RevenueWithdrawalState =
+  | RevenueWithdrawalStatePending
+  | RevenueWithdrawalStateSucceeded
+  | RevenueWithdrawalStateFailed;
+
+interface RevenueWithdrawalStatePending { type: 'pending'; }
+interface RevenueWithdrawalStateSucceeded { type: 'succeeded'; date: number; url: string; }
+interface RevenueWithdrawalStateFailed { type: 'failed'; }
+```
+
+### Unique & Regular Gifts Architecture (Bot API 9.2 - 10.3)
+```typescript
+interface GiftBackground { fill: BackgroundFill; }
+interface UniqueGiftModel { name: string; document: Document; rarity_per_mille: number; }
+interface UniqueGiftSymbol { name: string; document: Document; rarity_per_mille: number; }
+interface UniqueGiftBackdropColors { center_color: number; edge_color: number; pattern_color: number; text_color: number; }
+interface UniqueGiftBackdrop { name: string; colors: UniqueGiftBackdropColors; rarity_per_mille: number; }
+interface UniqueGiftColors { model_color?: number; symbol_color?: number; }
+interface GiftInfo { gift: Gift; send_date: number; text?: string; is_anonymous?: boolean; }
+interface UniqueGiftInfo { gift: UniqueGift; send_date: number; is_origin?: boolean; }
+
+type OwnedGift = OwnedGiftRegular | OwnedGiftUnique;
+interface OwnedGiftRegular { type: 'regular'; gift: Gift; send_date: number; text?: string; is_anonymous?: boolean; can_be_upgraded?: boolean; }
+interface OwnedGiftUnique { type: 'unique'; gift: UniqueGift; send_date: number; is_origin?: boolean; }
+interface OwnedGifts { total_count: number; gifts: OwnedGift[]; next_offset?: string; }
+interface AcceptedGiftTypes { allow_regular_gifts?: boolean; allow_unique_gifts?: boolean; }
+```

@@ -167,3 +167,136 @@ When promoting admins via `promoteChatMember` or inspecting `ChatAdministratorRi
 | **Delete Stories** | `can_delete_stories` | Delete stories posted in the channel. |
 | **Manage Video Chats** | `can_manage_video_chats` | Start, pause, or manage live streams. |
 
+---
+
+## 9. General Forum Topic Management
+
+Supergroup forums possess a default "General" topic with distinct lifecycle controls:
+
+- **Edit Title**: `editGeneralForumTopic(chat_id, name)`
+- **Close / Reopen**: `closeGeneralForumTopic(chat_id)`, `reopenGeneralForumTopic(chat_id)`
+- **Hide / Unhide**: `hideGeneralForumTopic(chat_id)`, `unhideGeneralForumTopic(chat_id)`
+- **Unpin Messages**: `unpinAllGeneralForumTopicMessages(chat_id)`
+
+---
+
+## 10. Invite Links & Member Verification
+
+Bots with `can_invite_users` administrator rights can create tracked invite links:
+
+```http
+POST https://api.telegram.org/bot<token>/createChatInviteLink
+Content-Type: application/json
+
+{
+  "chat_id": -1001234567890,
+  "name": "Twitter Campaign 2026",
+  "expire_date": 1712880000,
+  "member_limit": 50,
+  "creates_join_request": false
+}
+```
+
+- **`creates_join_request: true`**: Creates an approval-gate link requiring admin review.
+- **Revoking**: `revokeChatInviteLink(chat_id, invite_link)`.
+- **Primary Link**: `exportChatInviteLink(chat_id)`.
+
+---
+
+## 11. Admin Custom Titles & Channel Senders
+
+- **Custom Title**: Assign a custom badge to administrators (`setChatAdministratorCustomTitle(chat_id, user_id, custom_title: String)`). Appears next to the admin's name in group messages (0–16 characters).
+- **Banning Anonymous Channel Senders**: If users post in supergroups using a channel identity, ban or unban the specific channel:
+  - `banChatSenderChat(chat_id, sender_chat_id)`
+  - `unbanChatSenderChat(chat_id, sender_chat_id)`
+
+---
+
+## 12. Live Location Management
+
+Bots can stream or track real-time locations:
+
+- **Start Live Location**: Call `sendLocation` with `live_period` (60–86400 seconds), optional `heading` (1–360°), and `proximity_alert_radius`.
+- **Edit Live Location**:
+  ```http
+  POST https://api.telegram.org/bot<token>/editMessageLiveLocation
+  Content-Type: application/json
+
+  {
+    "chat_id": 123456789,
+    "message_id": 105,
+    "latitude": 37.7752,
+    "longitude": -122.4190,
+    "heading": 90
+  }
+  ```
+- **Stop Live Location**: `stopMessageLiveLocation(chat_id, message_id)`.
+
+---
+
+## 13. Channel Suggested Posts (Bot API 9.x+)
+
+Channel administrators can enable suggested posts where users submit posts for review, optionally attaching a price in Telegram Stars:
+
+- **`approveSuggestedPost(chat_id, message_id, send_date)`**: Approves and publishes or schedules a suggested post.
+- **`declineSuggestedPost(chat_id, message_id)`**: Rejects a submitted post.
+- Updates: `SuggestedPostApproved`, `SuggestedPostDeclined`, `SuggestedPostPaid`, `SuggestedPostRefunded`.
+---
+
+## 14. Comprehensive Chat Administration & Boost Schemas
+
+### Chat Management Methods
+```typescript
+setChatPermissions(params: { chat_id: number | string; permissions: ChatPermissions; use_independent_chat_permissions?: boolean }): Promise<boolean>;
+editChatInviteLink(params: { chat_id: number | string; invite_link: string; name?: string; expire_date?: number; member_limit?: number; creates_join_request?: boolean }): Promise<ChatInviteLink>;
+answerChatJoinRequestQuery(params: { chat_id: number | string; user_id: number; approve: boolean }): Promise<boolean>;
+sendChatJoinRequestWebApp(params: { chat_id: number | string; user_id: number; web_app: WebAppInfo }): Promise<boolean>;
+
+setChatPhoto(params: { chat_id: number | string; photo: InputFile }): Promise<boolean>;
+deleteChatPhoto(params: { chat_id: number | string }): Promise<boolean>;
+setChatTitle(params: { chat_id: number | string; title: string }): Promise<boolean>;
+setChatDescription(params: { chat_id: number | string; description?: string }): Promise<boolean>;
+
+pinChatMessage(params: { chat_id: number | string; message_id: number; disable_notification?: boolean; business_connection_id?: string }): Promise<boolean>;
+unpinChatMessage(params: { chat_id: number | string; message_id?: number; business_connection_id?: string }): Promise<boolean>;
+unpinAllChatMessages(params: { chat_id: number | string }): Promise<boolean>;
+leaveChat(params: { chat_id: number | string }): Promise<boolean>;
+
+getChatAdministrators(params: { chat_id: number | string }): Promise<ChatMemberAdministrator[]>;
+getChatMemberCount(params: { chat_id: number | string }): Promise<number>;
+getUserPersonalChatMessages(params: { chat_id: number | string; user_id: number; offset?: number; limit?: number }): Promise<Message[]>;
+
+setChatStickerSet(params: { chat_id: number | string; sticker_set_name: string }): Promise<boolean>;
+deleteChatStickerSet(params: { chat_id: number | string }): Promise<boolean>;
+getForumTopicIconStickers(): Promise<Sticker[]>;
+getUserChatBoosts(params: { chat_id: number | string; user_id: number }): Promise<UserChatBoosts>;
+```
+
+### Chat Types, Boost Sources & Forum Events
+```typescript
+interface ChatPhoto { small_file_id: string; small_file_unique_id: string; big_file_id: string; big_file_unique_id: string; }
+interface ChatLocation { location: Location; address: string; }
+interface UserChatBoosts { boosts: ChatBoost[]; }
+
+type ChatBoostSource = ChatBoostSourcePremium | ChatBoostSourceGiftCode | ChatBoostSourceGiveaway;
+interface ChatBoostSourcePremium { source: 'premium'; user: User; }
+interface ChatBoostSourceGiftCode { source: 'gift_code'; user: User; }
+interface ChatBoostSourceGiveaway { source: 'giveaway'; giveaway_message_id: number; user?: User; prize_star_count?: number; is_unclaimed?: boolean; }
+
+interface ChatOwnerLeft { /* Emitted when chat owner leaves */ }
+interface ChatOwnerChanged { new_owner: User; }
+interface ForumTopicCreated { name: string; icon_color: number; icon_custom_emoji_id?: string; }
+interface ForumTopicClosed { /* Emitted when topic closed */ }
+interface ForumTopicEdited { name?: string; icon_custom_emoji_id?: string; }
+interface ForumTopicReopened { /* Emitted when topic reopened */ }
+interface GeneralForumTopicHidden { /* Emitted when general topic hidden */ }
+interface GeneralForumTopicUnhidden { /* Emitted when general topic unhidden */ }
+interface CommunityChatAdded { chat: Chat; }
+interface CommunityChatJoined { chat: Chat; }
+interface CommunityChatRemoved { chat: Chat; }
+
+interface SuggestedPostPrice { currency: string; amount: number; }
+interface SuggestedPostInfo { price?: SuggestedPostPrice; state: 'pending' | 'approved' | 'rejected'; }
+interface SuggestedPostParameters { price?: SuggestedPostPrice; }
+interface SuggestedPostApprovalFailed { reason: string; }
+```

@@ -158,38 +158,23 @@ You can supply files in three ways:
 
 For real-time AI responses or progressive updates (Bot API 9.3+ / 10.x):
 
-### 1. `sendMessageDraft` / `sendRichMessageDraft`
-Allows bots to stream partial text responses to users as they are generated.
-- Draft appears pinned at the bottom of the chat without incrementing unread badges or triggering push notifications.
-- When generation finishes, call `sendMessage` with the final content.
-- Update frequency: Up to 1–2 draft updates per second.
-- Handle `stopped_message_generation` update if the user presses the client's "Stop" button.
-
-### 2. Traditional `editMessageText`
-If editing a standard message in-place:
-- **Rate Limit**: Telegram strictly throttles message edits to **1 edit per second per message**.
-- Catch `400 Bad Request: message is not modified` when text has not changed.
+- **Draft Streaming**: Call `sendMessageDraft` or `sendRichMessageDraft` to stream partial text or structured AST blocks pinned to the bottom of the chat without notifications.
+- **Stop Action**: Handle `stopped_message_generation` updates if the user clicks the native Stop button (`can_stop: true`).
+- **Traditional Edits**: If editing standard messages in-place with `editMessageText`, adhere to the **1 edit/second per message** limit and catch `400 Bad Request: message is not modified`.
+- *For complete AST block structures (`thinking`, `table`, `expandable_block_quotation`), see [`rich-messages-and-ephemeral.md`](./rich-messages-and-ephemeral.md).*
 
 ---
 
 ## 5. Ephemeral Messages (Bot API 10.2+)
 
-Ephemeral messages allow bots in group chats to send messages and command responses visible **only to a single target user** and the bot, reducing group chat noise.
+Ephemeral messages allow bots in group chats to send messages and command responses visible **only to a single target user** and the bot, eliminating public chat noise.
 
-```json
-// POST /sendMessage
-{
-  "chat_id": -1001234567890,
-  "text": "This secret balance is visible only to you.",
-  "ephemeral_message_parameters": {
-    "receiver_user_id": 987654321,
-    "replace_callback_query_message": true
-  }
-}
-```
+Pass `ephemeral_message_parameters: { "receiver_user_id": 12345, "replace_callback_query_message": true }` to `sendMessage`, `sendPhoto`, etc.
 
-- **Editing Ephemeral**: `editEphemeralMessageText`, `editEphemeralMessageMedia`, `editEphemeralMessageCaption`.
-- **Deleting Ephemeral**: `deleteEphemeralMessage(chat_id, ephemeral_message_id)`.
+- *For the complete ephemeral lifecycle (`editEphemeralMessageText`, `deleteEphemeralMessage`, `is_ephemeral` commands), see [`rich-messages-and-ephemeral.md`](./rich-messages-and-ephemeral.md).*
+- *For incoming media payloads and `getFile`, see [`content-types-and-payload-shapes.md`](./content-types-and-payload-shapes.md).*
+- *For message origins, quotes, and structured replies (`ReplyParameters`), see [`message-provenance-replies-and-origins.md`](./message-provenance-replies-and-origins.md).*
+
 
 ---
 
@@ -217,4 +202,70 @@ Modern polls support media attachments and flexible quiz evaluation:
   - `shuffle_options: true` (randomizes answer display order).
   - `hide_results_until_closes: true` (keeps voting private until poll terminates).
   - `open_period`: Maximum automated closure extended up to 30 days (2,628,000 seconds).
+---
 
+## 8. Message Copying, Editing & InputMedia Schemas
+
+### Copying, Forwarding & Message Modification Methods
+```typescript
+forwardMessage(params: { chat_id: number | string; from_chat_id: number | string; message_id: number; message_thread_id?: number; disable_notification?: boolean; protect_content?: boolean }): Promise<Message>;
+forwardMessages(params: { chat_id: number | string; from_chat_id: number | string; message_ids: number[]; message_thread_id?: number; disable_notification?: boolean; protect_content?: boolean }): Promise<MessageId[]>;
+copyMessage(params: { chat_id: number | string; from_chat_id: number | string; message_id: number; message_thread_id?: number; caption?: string; parse_mode?: string; reply_markup?: InlineKeyboardMarkup }): Promise<MessageId>;
+copyMessages(params: { chat_id: number | string; from_chat_id: number | string; message_ids: number[]; message_thread_id?: number }): Promise<MessageId[]>;
+
+sendVenue(params: { chat_id: number | string; latitude: number; longitude: number; title: string; address: string; foursquare_id?: string; google_place_id?: string }): Promise<Message>;
+
+editMessageCaption(params: { chat_id?: number | string; message_id?: number; inline_message_id?: string; caption?: string; parse_mode?: string; reply_markup?: InlineKeyboardMarkup }): Promise<Message | boolean>;
+editMessageMedia(params: { chat_id?: number | string; message_id?: number; inline_message_id?: string; media: InputMedia; reply_markup?: InlineKeyboardMarkup }): Promise<Message | boolean>;
+
+stopPoll(params: { chat_id: number | string; message_id: number; reply_markup?: InlineKeyboardMarkup }): Promise<Poll>;
+deleteMessage(params: { chat_id: number | string; message_id: number }): Promise<boolean>;
+deleteMessages(params: { chat_id: number | string; message_ids: number[] }): Promise<boolean>;
+
+deleteMessageReaction(params: { chat_id: number | string; message_id: number }): Promise<boolean>;
+deleteAllMessageReactions(params: { chat_id: number | string; message_id: number }): Promise<boolean>;
+```
+
+### Link Previews, Input Media & Reaction Schemas
+```typescript
+interface LinkPreviewOptions {
+  is_disabled?: boolean;
+  url?: string;
+  prefer_small_media?: boolean;
+  prefer_large_media?: boolean;
+  show_above_text?: boolean;
+}
+
+type InputMedia =
+  | InputMediaAnimation
+  | InputMediaAudio
+  | InputMediaDocument
+  | InputMediaPhoto
+  | InputMediaVideo
+  | InputMediaLink
+  | InputMediaLocation
+  | InputMediaSticker
+  | InputMediaVenue
+  | InputMediaVoiceNote;
+
+interface InputMediaAnimation { type: 'animation'; media: string; thumbnail?: InputFile | string; caption?: string; parse_mode?: string; width?: number; height?: number; duration?: number; has_spoiler?: boolean; }
+interface InputMediaAudio { type: 'audio'; media: string; thumbnail?: InputFile | string; caption?: string; parse_mode?: string; duration?: number; performer?: string; title?: string; }
+interface InputMediaDocument { type: 'document'; media: string; thumbnail?: InputFile | string; caption?: string; parse_mode?: string; disable_content_type_detection?: boolean; }
+interface InputMediaLink { type: 'link'; url: string; }
+interface InputMediaLocation { type: 'location'; latitude: number; longitude: number; }
+interface InputMediaSticker { type: 'sticker'; media: string; }
+interface InputMediaVenue { type: 'venue'; latitude: number; longitude: number; title: string; address: string; }
+interface InputMediaVoiceNote { type: 'voice_note'; media: string; duration?: number; }
+interface InputPaidMediaLivePhoto { type: 'live_photo'; photo: string; video: string; }
+
+type ReactionType = ReactionTypeEmoji | ReactionTypeCustomEmoji | ReactionTypePaid;
+interface ReactionTypeEmoji { type: 'emoji'; emoji: string; }
+interface ReactionTypeCustomEmoji { type: 'custom_emoji'; custom_emoji_id: string; }
+interface ReactionTypePaid { type: 'paid'; }
+
+interface PaidMediaInfo { star_count: number; paid_media: PaidMedia[]; }
+interface PaidMediaLivePhoto { type: 'live_photo'; photo: PhotoSize[]; video: Video; }
+interface PaidMediaPreview { type: 'preview'; width?: number; height?: number; duration?: number; }
+interface InputPollOptionMedia { media: string; parse_mode?: string; }
+interface VideoQuality { resolution: number; codec: string; }
+```

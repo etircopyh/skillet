@@ -113,3 +113,56 @@ Key administrative settings managed via [@BotFather](https://t.me/BotFather):
 ### 4. Mini App / Web App Registration (`/newapp` & `/editapp`)
 - Configure short name for direct deep links (`t.me/botusername/appname`).
 - Upload app icon, screenshots, and specify launch URL.
+---
+
+## 5. Bot Identity, Profile, Commands & Scopes Reference
+
+### Admin & Lifecycle Methods
+```typescript
+getMe(): Promise<User>;
+logOut(): Promise<boolean>; // Cloud server logout before running local Bot API
+close(): Promise<boolean>;  // Close instance before moving between local servers
+```
+
+### Command & Description Configuration
+```typescript
+deleteMyCommands(params?: { scope?: BotCommandScope; language_code?: string }): Promise<boolean>;
+getMyCommands(params?: { scope?: BotCommandScope; language_code?: string }): Promise<BotCommand[]>;
+
+getMyName(params?: { language_code?: string }): Promise<BotName>;
+getMyDescription(params?: { language_code?: string }): Promise<BotDescription>;
+getMyShortDescription(params?: { language_code?: string }): Promise<BotShortDescription>;
+
+getChatMenuButton(params?: { chat_id?: number }): Promise<MenuButton>;
+setMyDefaultAdministratorRights(params?: { rights?: ChatAdministratorRights; for_channels?: boolean }): Promise<boolean>;
+getMyDefaultAdministratorRights(params?: { for_channels?: boolean }): Promise<ChatAdministratorRights>;
+
+getUserProfilePhotos(params: { user_id: number; offset?: number; limit?: number }): Promise<UserProfilePhotos>;
+getUserProfileAudios(params: { user_id: number; offset?: number; limit?: number }): Promise<UserProfileAudios>;
+```
+
+### Command Scope Types & Profile Containers
+```typescript
+type BotCommandScope =
+  | BotCommandScopeDefault
+  | BotCommandScopeAllPrivateChats
+  | BotCommandScopeAllGroupChats
+  | BotCommandScopeAllChatAdministrators
+  | BotCommandScopeChat
+  | BotCommandScopeChatAdministrators
+  | BotCommandScopeChatMember;
+
+interface BotCommandScopeDefault { type: 'default'; }
+interface BotCommandScopeAllPrivateChats { type: 'all_private_chats'; }
+interface BotCommandScopeAllGroupChats { type: 'all_group_chats'; }
+interface BotCommandScopeAllChatAdministrators { type: 'all_chat_administrators'; }
+interface BotCommandScopeChat { type: 'chat'; chat_id: number | string; }
+interface BotCommandScopeChatAdministrators { type: 'chat_administrators'; chat_id: number | string; }
+interface BotCommandScopeChatMember { type: 'chat_member'; chat_id: number | string; user_id: number; }
+
+interface BotName { name: string; }
+interface BotDescription { description: string; }
+interface BotShortDescription { short_description: string; }
+interface UserProfilePhotos { total_count: number; photos: PhotoSize[][]; }
+interface UserProfileAudios { total_count: number; audios: Audio[]; }
+```

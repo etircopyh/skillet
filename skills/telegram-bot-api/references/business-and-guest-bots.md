@@ -106,3 +106,95 @@ Enables "Manager Bots" to dynamically spawn and control child bots on behalf of 
 - **`KeyboardButtonRequestManagedBot`**: Request user to authorize creation of a managed bot.
 - **`getManagedBotToken(user_id)`**: Retrieve token for the spawned managed bot.
 - **`replaceManagedBotToken(user_id)`**: Rotate compromised tokens for managed bots.
+
+---
+
+## 6. Business Account Profile & Story Management (Bot API 9.0+)
+
+Bots with the `can_change_info` and `can_manage_stories` business bot rights can manage the connected account's public profile and post stories:
+
+### Profile Customization
+- **`setBusinessAccountName(business_connection_id, first_name, last_name)`**
+- **`setBusinessAccountUsername(business_connection_id, username)`**
+- **`setBusinessAccountBio(business_connection_id, bio)`**
+- **`setBusinessAccountProfilePhoto(business_connection_id, photo: InputProfilePhoto)`**
+- **`removeBusinessAccountProfilePhoto(business_connection_id)`**
+- **`setBusinessAccountGiftSettings(business_connection_id, accepted_gift_types)`**
+- **`readBusinessMessage(business_connection_id, chat_id, message_id)`**: Marks customer message as read.
+- **`deleteBusinessMessages(business_connection_id, message_ids)`**: Deletes messages from business chat.
+
+### Business Stories
+- **`postStory(business_connection_id, content: InputStoryContent, active_period, caption, ...)`**: Posts a story (`active_period`: `21600` [6h], `43200` [12h], `86400` [24h], or `172800` [48h]).
+- **`repostStory(business_connection_id, from_chat_id, from_story_id, active_period)`**
+- **`editStory(business_connection_id, story_id, content, caption, ...)`**
+- **`deleteStory(business_connection_id, story_id)`**
+
+---
+
+## 7. Organization & User Verification API (Bot API 8.0+)
+
+Bots representing recognized organizations (e.g. government, corporate, or partner authorities with a custom verification icon) can officially verify third-party channels and users on Telegram:
+
+```http
+POST https://api.telegram.org/bot<token>/verifyUser
+Content-Type: application/json
+
+{
+  "user_id": 123456789,
+  "custom_description": "Verified Employee of Acme Corp"
+}
+```
+
+- **`verifyUser(user_id, custom_description)`**: Verifies a user profile.
+- **`verifyChat(chat_id, custom_description)`**: Verifies a channel or group chat.
+- **`removeUserVerification(user_id)`**: Revokes verification from user.
+- **`removeChatVerification(chat_id)`**: Revokes verification from chat.
+---
+
+## 8. Business Connections, Managed Bots & Checklists API
+
+### Business Account Methods
+```typescript
+getBusinessConnection(params: { business_connection_id: string }): Promise<BusinessConnection>;
+getBusinessAccountStarBalance(params: { business_connection_id: string }): Promise<StarBalance>;
+transferBusinessAccountStars(params: { business_connection_id: string; star_count: number }): Promise<boolean>;
+
+// Checklists in Business Accounts
+sendChecklist(params: { business_connection_id: string; chat_id: number; checklist: InputChecklist; reply_markup?: InlineKeyboardMarkup }): Promise<Message>;
+editMessageChecklist(params: { business_connection_id: string; chat_id: number; message_id: number; checklist: InputChecklist; reply_markup?: InlineKeyboardMarkup }): Promise<Message>;
+
+// Managed Bots (Bot API 9.6+)
+getManagedBotAccessSettings(params: { bot_user_id: number }): Promise<BotAccessSettings>;
+setManagedBotAccessSettings(params: { bot_user_id: number; permissions: BotAccessSettings }): Promise<boolean>;
+```
+
+### Business Profile & Story Types
+```typescript
+interface Birthdate { day: number; month: number; year?: number; }
+interface BusinessIntro { title?: string; message?: string; sticker?: Sticker; }
+interface BusinessLocation { address: string; location?: Location; }
+interface BusinessOpeningHoursInterval { opening_minute: number; closing_minute: number; }
+interface BusinessOpeningHours { time_zone_name: string; opening_hours: BusinessOpeningHoursInterval[]; }
+interface BotAccessSettings { can_reply?: boolean; can_manage_stories?: boolean; }
+interface BusinessBotRights { can_reply: boolean; can_manage_stories: boolean; }
+interface ManagedBotCreated { bot: User; }
+interface ChecklistTasksDone { tasks_done: string[]; }
+interface ChecklistTasksAdded { tasks_added: string[]; }
+interface SentGuestMessage { message_id: number; }
+interface UserRating { rating: number; }
+
+interface StoryArea { position: StoryAreaPosition; type: StoryAreaType; }
+interface StoryAreaPosition { x_percentage: number; y_percentage: number; width_percentage: number; height_percentage: number; rotation_angle: number; }
+type StoryAreaType = StoryAreaTypeLocation | StoryAreaTypeSuggestedReaction | StoryAreaTypeLink | StoryAreaTypeWeather | StoryAreaTypeUniqueGift;
+interface StoryAreaTypeLocation { type: 'location'; latitude: number; longitude: number; address?: LocationAddress; }
+interface StoryAreaTypeSuggestedReaction { type: 'suggested_reaction'; reaction_type: ReactionType; is_dark?: boolean; is_flipped?: boolean; }
+interface StoryAreaTypeLink { type: 'link'; url: string; }
+interface StoryAreaTypeWeather { type: 'weather'; temperature_c: number; emoji: string; background_color: number; }
+interface StoryAreaTypeUniqueGift { type: 'unique_gift'; name: string; }
+
+type InputStoryContent = InputStoryContentPhoto | InputStoryContentVideo;
+interface InputStoryContentPhoto { type: 'photo'; photo: InputFile | string; }
+interface InputStoryContentVideo { type: 'video'; video: InputFile | string; duration?: number; }
+interface InputProfilePhotoStatic { type: 'static'; photo: InputFile | string; }
+interface InputProfilePhotoAnimated { type: 'animated'; animation: InputFile | string; }
+```

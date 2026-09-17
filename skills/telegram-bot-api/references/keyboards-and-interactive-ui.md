@@ -156,3 +156,63 @@ Displays the target message as a quote in the client's reply input, forcing the 
   }
 }
 ```
+---
+
+## 6. Keyboard Sharing & Selection Types (Bot API 7.0+)
+
+```typescript
+// Request buttons for selecting users or chats
+interface KeyboardButtonRequestUsers {
+  request_id: number;
+  user_is_bot?: boolean;
+  user_is_premium?: boolean;
+  max_quantity?: number; // 1-10, default 1
+  request_name?: boolean;
+  request_username?: boolean;
+  request_photo?: boolean;
+}
+
+interface KeyboardButtonRequestChat {
+  request_id: number;
+  chat_is_channel: boolean;
+  chat_is_forum?: boolean;
+  chat_has_username?: boolean;
+  chat_is_created?: boolean;
+  user_administrator_rights?: ChatAdministratorRights;
+  bot_administrator_rights?: ChatAdministratorRights;
+  bot_is_member?: boolean;
+  request_title?: boolean;
+  request_username?: boolean;
+  request_photo?: boolean;
+}
+
+interface KeyboardButtonPollType {
+  type?: 'quiz' | 'regular'; // If omitted, user chooses poll type
+}
+
+interface DisabledButton {
+  disabled: boolean; // Custom styling for disabled inline buttons
+}
+
+// Payloads received on Message when user shares contact/chat
+interface UsersShared {
+  request_id: number;
+  users: SharedUser[];
+}
+
+interface SharedUser {
+  user_id: number;
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  photo?: PhotoSize[];
+}
+
+interface ChatShared {
+  request_id: number;
+  chat_id: number;
+  title?: string;
+  username?: string;
+  photo?: PhotoSize[];
+}
+```

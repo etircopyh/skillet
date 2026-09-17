@@ -136,32 +136,32 @@ Telegram delivers webhook requests from `149.154.160.0/20` and `91.108.4.0/22`. 
 
 An `Update` contains **at most ONE** of the following optional fields (plus `update_id`):
 
-| Update Field | Payload Type | Trigger Condition |
-| :--- | :--- | :--- |
-| `message` | `Message` | New incoming text, media, command, or service message in private/group chat. |
-| `edited_message` | `Message` | Existing message was edited. |
-| `channel_post` | `Message` | New message posted in a channel where the bot is administrator. |
-| `edited_channel_post` | `Message` | Channel post was edited. |
-| `business_connection` | `BusinessConnection` | Bot was connected or disconnected from a Telegram Business account. |
-| `business_message` | `Message` | New message in a Telegram Business chat managed by the bot. |
-| `edited_business_message`| `Message` | Edited message in a Telegram Business chat. |
-| `deleted_business_messages`| `BusinessMessagesDeleted`| Messages deleted from a Telegram Business chat. |
-| `message_reaction` | `MessageReactionUpdated` | User changed their reaction on a message (requires explicit `allowed_updates`). |
-| `message_reaction_count` | `MessageReactionCountUpdated`| Anonymous reaction counts updated on a message. |
-| `inline_query` | `InlineQuery` | User typed `@botusername query` in any chat. |
-| `chosen_inline_result` | `ChosenInlineResult` | User selected a result from an inline query. |
-| `callback_query` | `CallbackQuery` | User pressed an `InlineKeyboardButton` with `callback_data`. |
-| `shipping_query` | `ShippingQuery` | User provided shipping address for a physical invoice. |
-| `pre_checkout_query` | `PreCheckoutQuery` | User clicked final confirmation to pay an invoice / Telegram Stars. |
-| `purchased_paid_media` | `PaidMediaPurchased` | User bought paid media sent by the bot. |
-| `poll` | `Poll` | Poll state changed (votes, closure). |
-| `poll_answer` | `PollAnswer` | User voted in a non-anonymous poll. |
-| `my_chat_member` | `ChatMemberUpdated` | Bot's own membership status or permissions changed (added/kicked/promoted). |
-| `chat_member` | `ChatMemberUpdated` | Another user's status changed in a chat (requires explicit `allowed_updates`). |
-| `chat_join_request` | `ChatJoinRequest` | User requested to join a private group/channel with join request link. |
-| `chat_boost` | `ChatBoostUpdated` | Chat was boosted by a user. |
-| `removed_chat_boost` | `ChatBoostRemoved` | Chat boost expired or was removed. |
-| `guest_message` | `Message` | Message sent to a guest bot in a group chat. |
-| `stopped_message_generation` | `MessageGenerationStopped`| User stopped bot's streaming draft response. |
-| `subscription` | `BotSubscriptionUpdated` | User payment subscription created, renewed, or expired. |
-| `managed_bot` | `ManagedBotUpdated` | Managed bot created or token refreshed. |
+| Update Field | Payload Type | Trigger Condition | Reference Guide |
+| :--- | :--- | :--- | :--- |
+| `message` | `Message` | New incoming text, media, command, or service message in private/group chat. | [`content-types-and-payload-shapes.md`](./content-types-and-payload-shapes.md) |
+| `edited_message` | `Message` | Existing message was edited. | [`content-types-and-payload-shapes.md`](./content-types-and-payload-shapes.md) |
+| `channel_post` | `Message` | New message posted in a channel where the bot is administrator. | [`message-provenance-replies-and-origins.md`](./message-provenance-replies-and-origins.md) |
+| `edited_channel_post` | `Message` | Channel post was edited. | [`message-provenance-replies-and-origins.md`](./message-provenance-replies-and-origins.md) |
+| `business_connection` | `BusinessConnection` | Bot was connected or disconnected from a Telegram Business account. | [`business-and-guest-bots.md`](./business-and-guest-bots.md) |
+| `business_message` | `Message` | New message in a Telegram Business chat managed by the bot. | [`business-and-guest-bots.md`](./business-and-guest-bots.md) |
+| `edited_business_message`| `Message` | Edited message in a Telegram Business chat. | [`business-and-guest-bots.md`](./business-and-guest-bots.md) |
+| `deleted_business_messages`| `BusinessMessagesDeleted`| Messages deleted from a Telegram Business chat. | [`business-and-guest-bots.md`](./business-and-guest-bots.md) |
+| `message_reaction` | `MessageReactionUpdated` | User changed their reaction on a message (requires explicit `allowed_updates`). | [`chats-forums-and-moderation.md`](./chats-forums-and-moderation.md) |
+| `message_reaction_count` | `MessageReactionCountUpdated`| Anonymous reaction counts updated on a message. | [`chats-forums-and-moderation.md`](./chats-forums-and-moderation.md) |
+| `inline_query` | `InlineQuery` | User typed `@botusername query` in any chat. | [`inline-mode.md`](./inline-mode.md) |
+| `chosen_inline_result` | `ChosenInlineResult` | User selected a result from an inline query. | [`inline-mode.md`](./inline-mode.md) |
+| `callback_query` | `CallbackQuery` | User pressed an `InlineKeyboardButton` with `callback_data`. | [`keyboards-and-interactive-ui.md`](./keyboards-and-interactive-ui.md) |
+| `shipping_query` | `ShippingQuery` | User provided shipping address for a physical invoice. | [`payments-and-telegram-stars.md`](./payments-and-telegram-stars.md) |
+| `pre_checkout_query` | `PreCheckoutQuery` | User clicked final confirmation to pay an invoice / Telegram Stars. | [`payments-and-telegram-stars.md`](./payments-and-telegram-stars.md) |
+| `purchased_paid_media` | `PaidMediaPurchased` | User bought paid media sent by the bot. | [`payments-and-telegram-stars.md`](./payments-and-telegram-stars.md) |
+| `poll` | `Poll` | Poll state changed (votes, closure). | [`messages-formatting-and-media.md`](./messages-formatting-and-media.md) |
+| `poll_answer` | `PollAnswer` | User voted in a non-anonymous poll. | [`messages-formatting-and-media.md`](./messages-formatting-and-media.md) |
+| `my_chat_member` | `ChatMemberUpdated` | Bot's own membership status or permissions changed (added/kicked/promoted). | [`chats-forums-and-moderation.md`](./chats-forums-and-moderation.md) |
+| `chat_member` | `ChatMemberUpdated` | Another user's status changed in a chat (requires explicit `allowed_updates`). | [`chats-forums-and-moderation.md`](./chats-forums-and-moderation.md) |
+| `chat_join_request` | `ChatJoinRequest` | User requested to join a private group/channel with join request link. | [`chats-forums-and-moderation.md`](./chats-forums-and-moderation.md) |
+| `chat_boost` | `ChatBoostUpdated` | Chat was boosted by a user. | [`chats-forums-and-moderation.md`](./chats-forums-and-moderation.md) |
+| `removed_chat_boost` | `ChatBoostRemoved` | Chat boost expired or was removed. | [`chats-forums-and-moderation.md`](./chats-forums-and-moderation.md) |
+| `guest_message` | `Message` | Message sent to a guest bot in a group chat. | [`business-and-guest-bots.md`](./business-and-guest-bots.md) |
+| `stopped_message_generation` | `MessageGenerationStopped`| User stopped bot's streaming draft response. | [`rich-messages-and-ephemeral.md`](./rich-messages-and-ephemeral.md) |
+| `subscription` | `BotSubscriptionUpdated` | User payment subscription created, renewed, or expired. | [`payments-and-telegram-stars.md`](./payments-and-telegram-stars.md) |
+| `managed_bot` | `ManagedBotUpdated` | Managed bot created or token refreshed. | [`business-and-guest-bots.md`](./business-and-guest-bots.md) |
