@@ -3,7 +3,8 @@
 import html
 import re
 import urllib.parse
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from typing import Any, Dict, List, Optional
 import xml.etree.ElementTree as ET
 
@@ -17,14 +18,16 @@ class WebSource(BaseSource):
     display_name = "Web & News"
     icon = "🌐"
 
-    def _search_google_news_rss(self, query: str, limit: int = 8) -> List[SearchResult]:
-        """Fetch real-time breaking news via Google News RSS."""
-        encoded = urllib.parse.quote(query)
+    def _search_google_news_rss(self, query: str, lookback_days: int = 30, limit: int = 8) -> List[SearchResult]:
+        """Fetch real-time breaking news via Google News RSS restricted to lookback window."""
+        scoped_query = f"{query} when:{lookback_days}d"
+        encoded = urllib.parse.quote(scoped_query)
         url = f"https://news.google.com/rss/search?q={encoded}&hl=en-US&gl=US&ceid=US:en"
         xml_text = default_client.get_text(url, timeout=7)
         if not xml_text:
             return []
 
+        cutoff_dt = datetime.now(timezone.utc) - timedelta(days=lookback_days)
         results: List[SearchResult] = []
         try:
             root = ET.fromstring(xml_text)
@@ -41,6 +44,15 @@ class WebSource(BaseSource):
 
                 if not title or not url_val:
                     continue
+
+                # Validate pubDate recency
+                if pub_date:
+                    try:
+                        art_dt = parsedate_to_datetime(pub_date)
+                        if art_dt < cutoff_dt:
+                            continue
+                    except Exception:
+                        pass
 
                 clean_desc = html.unescape(re.sub(r"<[^>]+>", " ", desc)).strip()
                 clean_desc = " ".join(clean_desc.split())[:250]
@@ -113,12 +125,13 @@ class WebSource(BaseSource):
 
         return results
 
-    def _search_brave(self, query: str, limit: int = 10) -> List[SearchResult]:
+    def _search_brave(self, query: str, lookback_days: int = 30, limit: int = 10) -> List[SearchResult]:
         """Optional enhancement via Brave Search API if BRAVE_API_KEY is configured."""
         if not config.BRAVE_API_KEY:
             return []
 
-        url = f"https://api.search.brave.com/res/v1/web/search?q={urllib.parse.quote(query)}&count={limit}"
+        freshness = "pd" if lookback_days <= 1 else "pw" if lookback_days <= 7 else "pm" if lookback_days <= 30 else "py"
+        url = f"https://api.search.brave.com/res/v1/web/search?q={urllib.parse.quote(query)}&count={limit}&freshness={freshness}"
         headers = {
             "Accept": "application/json",
             "X-Subscription-Token": config.BRAVE_API_KEY,
@@ -143,12 +156,12 @@ class WebSource(BaseSource):
     def search(self, query: str, lookback_days: int = 30, limit: int = 15) -> List[SearchResult]:
         """Search Web & News using Google News RSS + DuckDuckGo Lite, augmented by Brave if available."""
         if config.BRAVE_API_KEY:
-            brave_res = self._search_brave(query, limit=limit)
+            brave_res = self._search_brave(query, lookback_days=lookback_days, limit=limit)
             if brave_res:
                 return brave_res
 
-        # Pull real-time news via Google News RSS
-        news_items = self._search_google_news_rss(query, limit=limit // 2 + 2)
+        # Pull real-time news via Google News RSS restricted to lookback window
+        news_items = self._search_google_news_rss(query, lookback_days=lookback_days, limit=limit // 2 + 2)
         # Pull organic web results via DDG Lite
         web_items = self._search_ddg_lite(query, limit=limit // 2 + 2)
 

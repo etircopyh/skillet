@@ -48,7 +48,7 @@ class TwitterSource(BaseSource):
 
         return tweet_ids
 
-    def _fetch_tweet_details_fxtwitter(self, tweet_id: str) -> Optional[SearchResult]:
+    def _fetch_tweet_details_fxtwitter(self, tweet_id: str, cutoff_ts: Optional[int] = None) -> Optional[SearchResult]:
         """Fetch rich tweet data from FxTwitter public API."""
         url = f"{config.FXTWITTER_API_BASE}/status/{tweet_id}"
         data = default_client.get_json(url, timeout=6)
@@ -60,13 +60,27 @@ class TwitterSource(BaseSource):
         if not text:
             return None
 
+        created_at = tweet.get("created_at", "")
+        created_ts = tweet.get("created_timestamp")
+
+        # Validate recency cutoff
+        if cutoff_ts:
+            if created_ts and created_ts < cutoff_ts:
+                return None
+            if not created_ts and created_at:
+                try:
+                    # e.g. "Thu Dec 11 16:03:09 +0000 2025"
+                    dt = datetime.strptime(created_at, "%a %b %d %H:%M:%S %z %Y")
+                    if dt.timestamp() < cutoff_ts:
+                        return None
+                except Exception:
+                    pass
+
         author_info = tweet.get("author", {})
         screen_name = author_info.get("screen_name", "")
         name = author_info.get("name", "")
         author_display = f"{name} (@{screen_name})" if screen_name else name
 
-        created_at = tweet.get("created_at", "")
-        created_ts = tweet.get("created_timestamp")
         date_str = ""
         if created_ts:
             try:
@@ -106,14 +120,19 @@ class TwitterSource(BaseSource):
 
     def search(self, query: str, lookback_days: int = 30, limit: int = 15) -> List[SearchResult]:
         """Search Twitter/X by discovering IDs and resolving via FxTwitter proxy."""
-        tweet_ids = self._discover_tweet_ids_via_ddg(query, limit=limit)
+        # Query more candidate IDs so that date filtering has enough candidates to satisfy limit
+        fetch_limit = max(limit * 2, 20)
+        tweet_ids = self._discover_tweet_ids_via_ddg(query, limit=fetch_limit)
         if not tweet_ids:
             return []
+
+        now_ts = int(datetime.now(timezone.utc).timestamp())
+        cutoff_ts = now_ts - (lookback_days * 86400)
 
         results: List[SearchResult] = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             future_to_id = {
-                executor.submit(self._fetch_tweet_details_fxtwitter, tid): tid
+                executor.submit(self._fetch_tweet_details_fxtwitter, tid, cutoff_ts): tid
                 for tid in tweet_ids
             }
             for future in concurrent.futures.as_completed(future_to_id):

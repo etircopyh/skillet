@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 # Package info
-VERSION = "4.0.0"
+VERSION = "4.1.0"
 SKILL_NAME = "last30days"
 
 # Cache path

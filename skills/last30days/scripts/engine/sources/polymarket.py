@@ -1,7 +1,7 @@
 """Polymarket source for prediction markets and real-world consensus odds."""
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 import urllib.parse
 
@@ -23,8 +23,20 @@ class PolymarketSource(BaseSource):
         data = default_client.get_json(url, timeout=6) or {}
         events = data.get("events", [])
 
+        cutoff_dt = datetime.now(timezone.utc) - timedelta(days=lookback_days)
         results: List[SearchResult] = []
         for ev in events:
+            # Check if event is closed in the past
+            if ev.get("closed"):
+                end_str = ev.get("endDate")
+                if end_str:
+                    try:
+                        end_dt = datetime.fromisoformat(end_str.replace("Z", "+00:00"))
+                        if end_dt < cutoff_dt:
+                            continue
+                    except Exception:
+                        pass
+
             title = ev.get("title") or ""
             slug = ev.get("slug") or ""
             event_url = f"https://polymarket.com/event/{slug}" if slug else ""

@@ -1,6 +1,6 @@
 """Dev.to source for developer tutorials, engineering blogs, and practitioner reactions."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 import urllib.parse
 
@@ -14,14 +14,16 @@ class DevToSource(BaseSource):
     icon = "✍️"
 
     def search(self, query: str, lookback_days: int = 30, limit: int = 10) -> List[SearchResult]:
-        """Search Dev.to articles via public REST API."""
+        """Search Dev.to articles via public REST API with recency enforcement."""
         encoded_query = urllib.parse.quote(query)
-        url = f"https://dev.to/api/articles?q={encoded_query}&per_page={limit}"
+        fetch_limit = max(limit * 2, 25)
+        url = f"https://dev.to/api/articles?q={encoded_query}&per_page={fetch_limit}"
 
         data = default_client.get_json(url, timeout=6) or []
         if not isinstance(data, list):
             return []
 
+        cutoff_dt = datetime.now(timezone.utc) - timedelta(days=lookback_days)
         results: List[SearchResult] = []
         for item in data:
             title = item.get("title") or ""
@@ -33,6 +35,15 @@ class DevToSource(BaseSource):
             comments = item.get("comments_count") or 0
             published_at = item.get("published_at") or ""
             tag_list = item.get("tag_list") or []
+
+            # Verify published date within lookback window
+            if published_at:
+                try:
+                    pub_dt = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
+                    if pub_dt < cutoff_dt:
+                        continue
+                except Exception:
+                    pass
 
             tags_str = f"[{', '.join(tag_list[:3])}] " if tag_list else ""
 

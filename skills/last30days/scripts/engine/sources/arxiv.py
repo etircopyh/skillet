@@ -1,6 +1,6 @@
 """arXiv source for recent preprints and research papers."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 import urllib.parse
 import xml.etree.ElementTree as ET
@@ -16,17 +16,19 @@ class ArxivSource(BaseSource):
     icon = "📄"
 
     def search(self, query: str, lookback_days: int = 30, limit: int = 10) -> List[SearchResult]:
-        """Search arXiv for recent preprints."""
+        """Search arXiv for recent preprints strictly within the lookback window."""
         encoded_query = urllib.parse.quote_plus(f"all:{query}")
+        fetch_limit = max(limit * 2, 25)
         url = (
             f"{config.ARXIV_API_BASE}?search_query={encoded_query}"
-            f"&sortBy=submittedDate&sortOrder=descending&max_results={limit}"
+            f"&sortBy=submittedDate&sortOrder=descending&max_results={fetch_limit}"
         )
 
         xml_text = default_client.get_text(url, timeout=10)
         if not xml_text:
             return []
 
+        cutoff_dt = datetime.now(timezone.utc) - timedelta(days=lookback_days)
         results: List[SearchResult] = []
         try:
             root = ET.fromstring(xml_text)
@@ -46,11 +48,20 @@ class ArxivSource(BaseSource):
                 authors = [a.text.strip() for a in author_elems if a.text]
                 author_str = ", ".join(authors[:3]) + (" et al." if len(authors) > 3 else "")
 
-                # Clean whitespace in summary
-                summary = " ".join(summary.split())[:350]
-
                 if not title or not url_val:
                     continue
+
+                # Enforce publication date within lookback window
+                if published:
+                    try:
+                        pub_dt = datetime.fromisoformat(published.replace("Z", "+00:00"))
+                        if pub_dt < cutoff_dt:
+                            continue
+                    except Exception:
+                        pass
+
+                # Clean whitespace in summary
+                summary = " ".join(summary.split())[:350]
 
                 results.append(
                     SearchResult(

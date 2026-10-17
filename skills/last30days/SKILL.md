@@ -1,6 +1,6 @@
 ---
 name: last30days
-version: "4.0.0"
+version: "4.1.0"
 description: "Research what people actually say about any topic, technology, company, person, or product over the last 30 days. Powered by zero-key public proxies, mirrors, and alternative frontends: FxTwitter for X, Reddit RSS feeds & dorks, native YouTube ytInitialData extraction, Algolia Hacker News, Polymarket prediction odds, arXiv preprints, GitHub repositories, Wikipedia momentum curves, Dev.to practitioner tutorials, Product Hunt launches, and Jina Reader (r.jina.ai) deep reading."
 argument-hint: 'last30days <topic> [--days 30] [--sources x,reddit,youtube,hn,web,github,polymarket,arxiv,wikipedia,devto,producthunt] [--deep] [--html]'
 allowed-tools: Bash, Read, Write, AskUserQuestion, WebSearch
@@ -145,7 +145,7 @@ python3 skills/last30days/scripts/last30days.py "discover <category>"
 ### Step 2: Relay the High-Signal Output
 1. **Mandatory First Line:** The response must begin with the badge emitted by the engine:
    ```
-   🌐 last30days v4.0.0 · synced {YYYY-MM-DD} · window: {N} days
+   🌐 last30days v4.1.0 · synced {YYYY-MM-DD} · window: {N} days
    ```
 2. **Present Ground Truth:** State the clear consensus, the main controversy/debate, and key numbers (e.g. Polymarket odds, GitHub stars, video views, Wikipedia velocity).
 3. **Preserve Quotes & Handles:** Include verbatim community quotes with exact author handles and upvote/like numbers.

@@ -1,4 +1,4 @@
-# last30days (v4.0.0)
+# last30days (v4.1.0)
 
 > A robust, zero-friction multi-source research engine powered by zero-key public proxies, mirrors, and alternative frontends.
 

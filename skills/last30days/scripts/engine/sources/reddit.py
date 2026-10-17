@@ -3,7 +3,7 @@
 import html
 import re
 import urllib.parse
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Set
 import xml.etree.ElementTree as ET
 
@@ -20,18 +20,38 @@ class RedditSource(BaseSource):
     # Common high-signal subreddits for tech, business, and general discussions
     DEFAULT_TECH_SUBS = ["technology", "programming", "artificial", "MachineLearning", "LocalLLaMA", "ChatGPT"]
 
-    def _search_rss(self, query: str, subreddit: Optional[str] = None, limit: int = 15) -> List[SearchResult]:
-        """Fetch posts via Reddit's Atom/RSS feeds."""
+    def _search_rss(
+        self,
+        query: str,
+        lookback_days: int = 30,
+        subreddit: Optional[str] = None,
+        limit: int = 15,
+    ) -> List[SearchResult]:
+        """Fetch posts via Reddit's Atom/RSS feeds with dynamic time parameter and date validation."""
         encoded_query = urllib.parse.quote_plus(query)
-        if subreddit:
-            url = f"https://www.reddit.com/r/{subreddit}/search.rss?q={encoded_query}&restrict_sr=1&sort=relevance&t=month"
+
+        # Dynamic time window for Reddit search
+        if lookback_days <= 1:
+            t_param = "day"
+        elif lookback_days <= 7:
+            t_param = "week"
+        elif lookback_days <= 30:
+            t_param = "month"
+        elif lookback_days <= 365:
+            t_param = "year"
         else:
-            url = f"https://www.reddit.com/search.rss?q={encoded_query}&sort=relevance&t=month"
+            t_param = "all"
+
+        if subreddit:
+            url = f"https://www.reddit.com/r/{subreddit}/search.rss?q={encoded_query}&restrict_sr=1&sort=relevance&t={t_param}"
+        else:
+            url = f"https://www.reddit.com/search.rss?q={encoded_query}&sort=relevance&t={t_param}"
 
         xml_text = default_client.get_text(url, timeout=8)
         if not xml_text:
             return []
 
+        cutoff_dt = datetime.now(timezone.utc) - timedelta(days=lookback_days)
         results: List[SearchResult] = []
         try:
             root = ET.fromstring(xml_text)
@@ -55,6 +75,15 @@ class RedditSource(BaseSource):
                 # Ignore top-level subreddit links (e.g. https://www.reddit.com/r/technology/)
                 if "/comments/" not in url_val:
                     continue
+
+                # Verify recency from ISO timestamp
+                if date_val:
+                    try:
+                        post_dt = datetime.fromisoformat(date_val.replace("Z", "+00:00"))
+                        if post_dt < cutoff_dt:
+                            continue
+                    except Exception:
+                        pass
 
                 # Strip HTML from content snippet
                 snippet = ""
@@ -137,7 +166,7 @@ class RedditSource(BaseSource):
         # If specific subreddits are requested, search them directly
         if subreddits:
             for sub in subreddits:
-                sub_results = self._search_rss(query, subreddit=sub, limit=5)
+                sub_results = self._search_rss(query, lookback_days=lookback_days, subreddit=sub, limit=5)
                 for r in sub_results:
                     if r.url not in seen_urls:
                         seen_urls.add(r.url)
@@ -145,17 +174,19 @@ class RedditSource(BaseSource):
 
         # Global RSS search
         if len(merged) < limit:
-            rss_results = self._search_rss(query, limit=limit)
+            rss_results = self._search_rss(query, lookback_days=lookback_days, limit=limit)
             for r in rss_results:
                 if r.url not in seen_urls:
                     seen_urls.add(r.url)
                     merged.append(r)
 
-        # Supplement with DDG dorking if fewer than requested
-        if len(merged) < limit:
+        # Supplement with DDG dorking if fewer than requested and no results from RSS
+        if len(merged) == 0:
             dork_results = self._search_ddg_dork(query, limit=limit)
             for r in dork_results:
                 if r.url not in seen_urls:
+                    seen_urls.add(r.url)
+                    merged.append(r)
                     seen_urls.add(r.url)
                     merged.append(r)
 

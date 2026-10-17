@@ -2,7 +2,7 @@
 
 import html
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 import xml.etree.ElementTree as ET
 
@@ -16,13 +16,14 @@ class ProductHuntSource(BaseSource):
     display_name = "Product Hunt"
     icon = "🚀"
 
-    def _search_feed(self, query: str, limit: int = 5) -> List[SearchResult]:
-        """Check Product Hunt's public launch feed for matching products."""
+    def _search_feed(self, query: str, lookback_days: int = 30, limit: int = 5) -> List[SearchResult]:
+        """Check Product Hunt's public launch feed for matching products within lookback window."""
         url = "https://www.producthunt.com/feed"
         xml_text = default_client.get_text(url, timeout=6)
         if not xml_text:
             return []
 
+        cutoff_dt = datetime.now(timezone.utc) - timedelta(days=lookback_days)
         results: List[SearchResult] = []
         q_words = query.lower().split()
         try:
@@ -41,6 +42,15 @@ class ProductHuntSource(BaseSource):
 
                 if not title or not url_val:
                     continue
+
+                # Verify publication date within lookback window
+                if published:
+                    try:
+                        pub_dt = datetime.fromisoformat(published.replace("Z", "+00:00"))
+                        if pub_dt < cutoff_dt:
+                            continue
+                    except Exception:
+                        pass
 
                 clean_summary = html.unescape(re.sub(r"<[^>]+>", " ", summary)).strip()
                 clean_summary = " ".join(clean_summary.split())
@@ -106,7 +116,7 @@ class ProductHuntSource(BaseSource):
 
     def search(self, query: str, lookback_days: int = 30, limit: int = 6) -> List[SearchResult]:
         """Search Product Hunt via launch feed and search dorks."""
-        results = self._search_feed(query, limit=limit)
+        results = self._search_feed(query, lookback_days=lookback_days, limit=limit)
         if len(results) < limit:
             dork_results = self._search_ddg(query, limit=limit - len(results))
             seen = {r.url for r in results}
